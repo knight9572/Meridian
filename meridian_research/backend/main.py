@@ -1,13 +1,27 @@
+import os
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+
 from research_engine import run_agent_research, OPENAI_MODEL, client
 
 app = FastAPI(title="Meridian Research Agent API")
 
+allowed_origins = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+]
+extra_origins = os.getenv("ALLOWED_ORIGINS", "")
+if extra_origins:
+    allowed_origins.extend(
+        origin.strip() for origin in extra_origins.split(",") if origin.strip()
+    )
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_origins=allowed_origins,
+    allow_origin_regex=r"https://.*\.(vercel\.app|netlify\.app)$",
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
