@@ -53,15 +53,33 @@ export default function App() {
   const handleRunResearch = async (searchQuery) => {
     const q = (typeof searchQuery === 'string' ? searchQuery : query).trim();
     if (!q || loading) return;
+
+    const currentSessionId = activeSessionId || Date.now().toString();
+    const sessionTimestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
     setLoading(true);
-    const newSessionId = Date.now().toString();
-    const tempSession = { id: newSessionId, query: q,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), result: null, loading: true };
-    setSessions((prev) => [tempSession, ...prev]);
-    setActiveSessionId(newSessionId);
+    setSessions((prev) => {
+      if (activeSessionId) {
+        return prev.map((s) => s.id === activeSessionId
+          ? { ...s, query: q, timestamp: sessionTimestamp, result: null, loading: true }
+          : s);
+      }
+
+      const tempSession = {
+        id: currentSessionId,
+        query: q,
+        timestamp: sessionTimestamp,
+        result: null,
+        loading: true,
+      };
+      return [tempSession, ...prev];
+    });
+    setActiveSessionId(currentSessionId);
     setQuery('');
+
     const finish = (result) => setSessions((prev) => prev.map((s) =>
-      (s.id === newSessionId ? { ...s, result, loading: false } : s)));
+      (s.id === currentSessionId ? { ...s, query: q, timestamp: sessionTimestamp, result, loading: false } : s)));
+
     try {
       const resp = await fetch(`${API_URL}/api/research`, { method: 'POST',
         headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query: q }) });
@@ -106,8 +124,15 @@ export default function App() {
     <main className="flex-1 flex flex-col overflow-hidden bg-gradient-to-b from-[#0b0c0e] to-[#07080a]">
       <header className="h-14 border-b border-[#1f2128] px-6 flex items-center justify-between bg-[#0b0c0e]/80 backdrop-blur-md"><div className="flex items-center gap-2 text-xs text-zinc-400"><Globe className="w-4 h-4 text-amber-400" /><span>Autonomous Web Retrieval &amp; Synthesis</span></div>{activeSession?.result && <button onClick={copyMarkdown} className="flex items-center gap-1.5 text-xs bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white px-3 py-1.5 rounded-lg border border-zinc-800 transition-colors">{copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}<span>{copied ? 'Copied' : 'Export Markdown'}</span></button>}</header>
       <div className="flex-1 overflow-y-auto p-6 md:p-10 max-w-5xl mx-auto w-full">
+        <div className="w-full max-w-2xl mx-auto mb-8">
+          <div className="relative flex items-center bg-[#13151b] border border-zinc-800 hover:border-amber-500/40 focus-within:border-amber-500/80 rounded-xl shadow-2xl transition-all">
+            <Search className="w-5 h-5 text-zinc-500 ml-4 flex-shrink-0" />
+            <input type="text" value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleRunResearch()} placeholder="Enter research topic, question, or technology..." className="w-full bg-transparent px-4 py-4 text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none" disabled={loading} />
+            <button onClick={() => handleRunResearch()} disabled={loading || !query.trim()} className="mr-2 px-5 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 disabled:opacity-40 text-black font-semibold text-xs rounded-lg transition-all shadow-md flex items-center gap-2"><span>Research</span><ArrowUpRight className="w-4 h-4" /></button>
+          </div>
+        </div>
+
         {!activeSession ? <div className="h-full flex flex-col justify-center items-center text-center -mt-8"><div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-400/10 via-amber-500/20 to-amber-600/5 border border-amber-500/30 flex items-center justify-center mb-6 shadow-2xl shadow-amber-500/10"><Sparkles className="w-8 h-8 text-amber-400" /></div><h2 className="font-serif text-3xl md:text-4xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-amber-100 via-amber-200 to-amber-400 mb-3">Autonomous Intelligence Engine</h2><p className="text-sm md:text-base text-zinc-400 max-w-xl mb-10 leading-relaxed font-light">Ask any complex technical, market, or scientific question. The agent autonomously plans search queries, verifies web sources, and drafts cited reports.</p>
-          <div className="w-full max-w-2xl mb-8"><div className="relative flex items-center bg-[#13151b] border border-zinc-800 hover:border-amber-500/40 focus-within:border-amber-500/80 rounded-xl shadow-2xl transition-all"><Search className="w-5 h-5 text-zinc-500 ml-4 flex-shrink-0" /><input type="text" value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleRunResearch()} placeholder="Enter research topic, question, or technology..." className="w-full bg-transparent px-4 py-4 text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none" disabled={loading} /><button onClick={() => handleRunResearch()} disabled={loading || !query.trim()} className="mr-2 px-5 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 disabled:opacity-40 text-black font-semibold text-xs rounded-lg transition-all shadow-md flex items-center gap-2"><span>Research</span><ArrowUpRight className="w-4 h-4" /></button></div></div>
           <div className="w-full max-w-2xl"><p className="text-xs text-zinc-500 mb-3 uppercase tracking-wider font-semibold">Or explore suggested prompts</p><div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">{SUGGESTIONS.map((s, idx) => <button key={idx} onClick={() => handleRunResearch(s)} className="text-left p-3.5 rounded-xl bg-[#121419] hover:bg-[#1a1c24] border border-zinc-800/80 hover:border-amber-500/30 text-xs text-zinc-300 hover:text-amber-200 transition-all group flex items-start justify-between gap-2"><span className="line-clamp-2">{s}</span><ArrowUpRight className="w-4 h-4 text-zinc-600 group-hover:text-amber-400 flex-shrink-0 transition-colors" /></button>)}</div></div>
         </div> : <div className="space-y-6 pb-20"><div className="border-b border-[#1f2128] pb-6"><div className="flex items-center gap-2 text-amber-400 text-xs font-semibold uppercase tracking-wider mb-2"><Sparkles className="w-4 h-4" /> Research Query</div><h1 className="text-2xl md:text-3xl font-serif font-bold text-white tracking-wide">{activeSession.query}</h1></div>
           {activeSession.loading ? <div className="p-8 rounded-2xl bg-[#121419] border border-zinc-800 flex flex-col items-center justify-center space-y-4"><div className="w-10 h-10 border-2 border-amber-500/20 border-t-amber-400 rounded-full animate-spin"></div><div className="text-center"><p className="text-sm font-medium text-zinc-200">Autonomous Agent at Work</p><p className="text-xs text-zinc-500 mt-1">Executing web queries, reading page contents, and cross-referencing findings...</p></div></div> : activeSession.result && <>
