@@ -1349,14 +1349,6 @@ The project provides a foundation for understanding tool-using AI systems, workf
 
 ---
 
-## License
-
-No license has been specified for this project yet.
-
-If you intend to publish the repository publicly or allow others to reuse the code, add an appropriate open-source license after deciding how the project should be shared.
-
----
-
 ## Conclusion
 
 Meridian demonstrates how a modern web application can integrate frontend development, backend APIs, web search, webpage extraction, and Large Language Models into a unified research workflow.
